@@ -12,7 +12,17 @@ module.exports = {
     findContentById: async (ContentId) => {
         console.log("findPinById HelperFunction is called", ContentId);
 
-        const Content = await Model.Content.findOne({_id:ContentId});
+        const Content = await Model.Content.findOne({_id:ContentId})
+        .populate({
+            path: "categoryAndSubCategory.category",
+            model: "Category",
+            select: "_id categoryName",
+          })
+          .populate({
+            path: "categoryAndSubCategory.subcategory",
+            model: "Category",
+            select: "_id categoryName",
+          });
         return Content;
     }
 };

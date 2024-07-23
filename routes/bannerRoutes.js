@@ -6,9 +6,6 @@ const multer = require("multer");
 const Authentication = require("../services/index");
 
 const userStorage = multer.diskStorage({
-  // destination: (req, file, cb) => {
-  //   cb(null, "/tmp");
-  // },
   filename: (req, file, cb) => {
     cb(
       null,
@@ -17,17 +14,35 @@ const userStorage = multer.diskStorage({
   },
 });
 
+const imageFileFilter = function (req, file, callback) {
+  const ext = path.extname(file.originalname).toLowerCase();
+  const allowedImageTypes = [".png", ".jpg", ".gif", ".jpeg"];
+  if (allowedImageTypes.includes(ext)) {
+    callback(null, true);
+  } else {
+    callback(new Error("Only images are allowed"));
+  }
+};
+
+const videoFileFilter = function (req, file, callback) {
+  const ext = path.extname(file.originalname).toLowerCase();
+  const allowedVideoTypes = [".mp4", ".avi", ".mov"];
+  if (allowedVideoTypes.includes(ext)) {
+    callback(null, true);
+  } else {
+    callback(new Error("Only videos are allowed"));
+  }
+};
+
 const upload = multer({
   storage: userStorage,
   fileFilter: function (req, file, callback) {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const allowedImageTypes = [".png", ".jpg", ".gif", ".jpeg"];
-    const allowedVideoTypes = [".mp4", ".avi", ".mov"];
-
-    if (allowedImageTypes.includes(ext) || allowedVideoTypes.includes(ext)) {
-      callback(null, true);
+    if (file.fieldname === "image") {
+      imageFileFilter(req, file, callback);
+    } else if (file.fieldname === "video") {
+      videoFileFilter(req, file, callback);
     } else {
-      callback(new Error("Only images and videos are allowed"));
+      callback(new Error("Invalid fieldname"));
     }
   },
   limits: {
@@ -35,20 +50,19 @@ const upload = multer({
   },
 });
 
-
 //post custom BannerPost
 router.route("/createBanner").post(
   upload.fields([
     {
-      name: "images",
-      maxCount: 5,
+      name: "image",
+      maxCount: 1,
     },
     {
-      name: "videos",
-      maxCount: 5,
+      name: "video",
+      maxCount: 1,
     },
   ]),
-  // Authentication.UserAuth,
+  Authentication.UserAuth,
   Controller.bannerController.createBanner
 );
 
@@ -57,12 +71,12 @@ router.route("/updateBanner").put(
   Authentication.UserAuth,
   upload.fields([
     {
-      name: "images",
-      maxCount: 5,
+      name: "image",
+      maxCount: 1,
     },
     {
-      name: "videos",
-      maxCount: 5,
+      name: "video",
+      maxCount: 1,
     },
   ]),
   Controller.bannerController.updateBanner
@@ -71,22 +85,18 @@ router.route("/updateBanner").put(
 //delete BannerPost
 router
   .route("/deleteBanner/:id")
-  .delete(
-    Authentication.UserAuth,
-    Controller.bannerController.declineBanner);
+  .delete(Authentication.UserAuth, Controller.bannerController.declineBanner);
 
 // get BannerPost by id
-router
-  .route("/findBannerById/:id")
-  .get(
-    Authentication.UserAuth, 
-    Controller.bannerController.getBanner);
+router.route("/findBannerById/:id").get(
+  // Authentication.UserAuth,
+  Controller.bannerController.getBanner
+);
 
 // get all  BannerPosts with details
-router
-  .route("/getAllBanners")
-  .get(
-     Authentication.UserAuth,
-     Controller.bannerController.getAllBanner);
+router.route("/getAllBanners").get(
+  //  Authentication.UserAuth,
+  Controller.bannerController.getAllBanner
+);
 
 module.exports = router;

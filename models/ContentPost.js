@@ -1,6 +1,15 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
-
+const categorySchema = new Schema({
+  category: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Category",
+  },
+  subcategory: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Category",
+  },
+});
 const ContentPostSchema = new Schema(
   {
     title: {
@@ -10,26 +19,19 @@ const ContentPostSchema = new Schema(
     description: {
       type: String,
     },
-    descriptionImages: [
+    galleryImages: [
       {
         type: String,
       },
     ],
-    descriptionVideos: [
-      {
-        type: String,
-      },
-    ],
+    video: {
+      type: String,
+    },
     primaryImage: {
       type: String,
     },
-    audio: {
-      type: String,
-    },
-    category: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
-    },
+
+    categoryAndSubCategory: categorySchema,
   },
   {
     timestamps: true,

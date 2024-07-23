@@ -31,35 +31,39 @@ var upload = multer({
     fileSize: 1024 * 1024,
   },
 });
-//post custom CategoryPost 
+//post custom CategoryPost
 router.route("/createCategory").post(
   Authentication.UserAuth,
-  Controller.categoryController.createCategory);
+  Controller.categoryController.createCategory
+);
 
 //update CategoryPost
 router.route("/updateCategory").put(
   Authentication.UserAuth,
-  Controller.categoryController.updateCategory);
+  Controller.categoryController.updateCategory
+);
 
 //delete CategoryPost
 router.route("/deleteCategory/:id").delete(
   Authentication.UserAuth,
-  Controller.categoryController.declineCategory);
-
+  Controller.categoryController.declineCategory
+);
 
 // get CategoryPost by id
 router.route("/findCategoryById/:id").get(
-  Authentication.UserAuth,
-  Controller.categoryController.getCategory);
+  // Authentication.UserAuth,
+  Controller.categoryController.getCategory
+);
 
-  // get all  CategoryPosts with details
+// get all  CategoryPosts with details
 router.route("/getAllCategory").get(
-  Authentication.UserAuth,
-  Controller.categoryController.getAllCategory);
+  // Authentication.UserAuth,
+  Controller.categoryController.getAllCategory
+);
 
-
+router.route("/getAllContentCategory").get(
+  // Authentication.UserAuth,
+  Controller.categoryController.getAllCategory
+);
 
 module.exports = router;
-
-
-

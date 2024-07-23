@@ -1,21 +1,22 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
+
 const BannerModel = new Schema(
   {
     title: {
       type: String,
-      required: true,
     },
-    images: [
+    description: {
+      type: String,
+    },
+    image: 
       {
         type: String,
       },
-    ],
-    videos: [
+    video: 
       {
         type: String,
       },
-    ],
   },
   {
     timestamps: true,
@@ -27,7 +28,6 @@ BannerModel.set("toJSON", {
   virtuals: false,
   transform: (doc, ret, options) => {
     delete ret.__v;
-    delete ret.password;
   },
 });
 

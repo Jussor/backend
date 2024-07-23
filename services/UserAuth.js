@@ -1,4 +1,5 @@
-const Services = require("./index");
+const JwtService = require("./JwtService");
+const HashService = require("./HashService");
 const Model = require("../models/index");
 module.exports = (req, res, next) => {
   if (req.headers && req.headers.authorization) {
@@ -11,9 +12,9 @@ module.exports = (req, res, next) => {
         .status(401)
         .send({ code: "Failed", message: "Unauthorized request" });
     const token = parts[1];
-    Services.JwtService.verify(token, (error, user) => {
+    JwtService.verify(token, (error, user) => {
       if (error) return res.forbidden("Access Denied");
-      const query = { _id: Services.HashService.decrypt(user.id) };
+      const query = { _id: HashService.decrypt(user.id) };
       Model.User.findOne(query)
         .then((user) => {
           if (!user) return res.forbidden("Unauthorized request");

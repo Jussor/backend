@@ -42,12 +42,6 @@ const UserModel = new Schema(
       type: Boolean,
       default: false,
     },
-    facebookId: {
-      type: String
-    },
-    googleId: {
-      type: String
-    },
     accessToken: {
       type: String
     }

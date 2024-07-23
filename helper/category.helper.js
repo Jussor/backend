@@ -13,7 +13,11 @@ module.exports = {
     findCategoryById: async (CategoryId) => {
         console.log("findCategoryById HelperFunction is called", CategoryId);
 
-        const result = await Model.Category.findOne({_id:CategoryId});
+        const result = await Model.Category.findOne({_id:CategoryId})
+        .populate({
+            path: "parentCategory childCategories",
+            select: "_id categoryName",
+          })
         return result;
     }
 };

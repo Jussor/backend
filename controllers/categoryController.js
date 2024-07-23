@@ -28,29 +28,36 @@ module.exports = {
     console.log("createCategory is called");
     try {
       const { categoryName, parentId } = req.body;
-  
+
       let parentCategory = null;
-  
+
       if (parentId) {
         parentCategory = await Model.Category.findById(parentId);
-  
+
         if (!parentCategory) {
           return res.status(404).json({ message: "Parent category not found" });
         }
       }
-  
+
       const newCategory = new Model.Category({
         categoryName,
         parentCategory: parentId || null,
       });
-  
+
       const savedCategory = await newCategory.save();
-  
-  
+
+      // If parentCategory exists, update its childCategories field
+      if (parentCategory) {
+        // Update the parentCategory's childCategories array with the new category's id
+        await Model.Category.findByIdAndUpdate(parentCategory._id, {
+          $addToSet: { childCategories: savedCategory._id },
+        });
+      }
+
       res.json(savedCategory);
     } catch (error) {
       console.error(error);
-      res.status(500).send(error?.message, "Server Error");
+      res.status(500).send(error?.message || "Server Error");
     }
   }),
 
@@ -59,56 +66,56 @@ module.exports = {
     console.log("Categorydetails is called");
     try {
       // Fetch all categories without pagination and populate parentCategory
-      if(req.query){
-        
-        let parentCategory = req.query.parentCategory
-        let subcategories = await Model.Category.find({ isDeleted: false ,parentCategory:parentCategory }).select("_id categoryName parentCategory")
-        .populate({
-          path: "parentCategory",
-          select: "_id categoryName",
+      if (req.query.parentCategory) {
+        let parentCategory = req.query.parentCategory;
+        let subcategories = await Model.Category.find({
+          isDeleted: false,
+          parentCategory: parentCategory,
         })
-        .sort("-_id")
+          .select("_id categoryName parentCategory")
+          .populate({
+            path: "parentCategory",
+            select: "_id categoryName",
+          })
+          .sort("-_id");
         const CategorySize = subcategories.length;
 
-      const result = {
-        Category: subcategories,
-        count: CategorySize,
-      };
+        const result = {
+          Category: subcategories,
+          count: CategorySize,
+        };
 
-      // Check if no categories are found
-    
-      if (CategorySize === 0) {
-        // Return an empty array as the result
-        return res.ok(
-          "No subcategories found",
-          []
-        );
-      }
-      // Return a success response with the result
-      return res.ok(
-        "subCategorydetails found successfully",
-        result,
-      );
+        // Check if no categories are found
+
+        if (CategorySize === 0) {
+          // Return an empty array as the result
+          return res.ok("No subcategories found", []);
+        }
+        console.log(result, "result");
+        // Return a success response with the result
+        return res.ok("subCategorydetails found successfully", result);
       }
 
-      const parentCategories = await Model.Category.find({ isDeleted: false,parentCategory:null })
+      const parentCategories = await Model.Category.find({
+        isDeleted: false,
+        parentCategory: null,
+        // childCategories: { $ne: [] }, // Exclude documents where childCategories is an empty array
+      })
         .sort("-_id")
-        .select("_id categoryName ")
-      const CategorySize = parentCategories.length;
+        .select("_id categoryName childCategories")
+        .populate({
+          path: "childCategories",
+          select: "_id categoryName",
+        });
 
-      const result = {
+      const CategorySize = parentCategories.length;
+      const parentResult = {
         Category: parentCategories,
         count: CategorySize,
       };
 
-      // Check if no categories are found
-    
-
       // Return a success response with the result
-      return res.ok(
-        "Categorydetails found successfully",
-        result
-      );
+      return res.ok("Category details found successfully", parentResult);
     } catch (error) {
       throw new HTTPError(Status.INTERNAL_SERVER_ERROR, error);
     }
@@ -136,15 +143,116 @@ module.exports = {
 
   // Delete a Category user
   declineCategory: catchAsync(async (req, res, next) => {
-    var categoryId = req.params.id;
+    var CategoryId = req.params.id;
     try {
-      const CategoryUser = await Model.Category.findOneAndDelete(categoryId);
-      if (!CategoryUser)
-        return res.badRequest("Category  Not Found in our records");
-      var message = "Category user deleted successfully";
-      res.ok(message, CategoryUser);
+      const { childParams } = req.query;
+
+      if (childParams) {
+        const deletedCategory = await Model.Category.findById(CategoryId);
+
+        await deletedCategory.customUpdate({ isDeleted: true });
+        // If category is not found, return a bad request response
+        if (!deletedCategory)
+          return res.badRequest("subCategory not found in our records");
+
+        var message = "SubCategory marked as deleted successfully";
+        res.ok(message, deletedCategory);
+      } else {
+        // If childParams doesn't exist, update the category to set isDeleted to true
+        const updatedCategory = await Model.Category.findById(CategoryId);
+        if (!updatedCategory)
+          return res.badRequest("Category not found in our records");
+
+        try {
+          await updatedCategory.customUpdate({ isDeleted: true });
+          var message = "Category marked as deleted successfully";
+          res.ok(message, updatedCategory);
+        } catch (err) {
+          if (err.childCategories) {
+            // Handle the specific error from the middleware
+            return res.status(400).json({
+              error: "Cannot update category with child categories.",
+              childCategories: err.childCategories,
+            });
+          } else {
+            // Handle other errors
+            // Handle other errors
+            throw new HTTPError(Status.INTERNAL_SERVER_ERROR, err);
+          }
+        }
+      }
     } catch (err) {
-      throw new HTTPError(Status.INTERNAL_SERVER_ERROR, err);
+      console.log(err.message);
+      if (err.childCategories) {
+        // Handle the specific error from the middleware
+        return res.status(400).json({
+          error: "Cannot update category with child categories.",
+          childCategories: err.childCategories,
+        });
+      } else {
+        // Handle other errors
+        throw new HTTPError(Status.INTERNAL_SERVER_ERROR, err);
+      }
     }
   }),
+
+  getAllAdminCategory: catchAsync(async (req, res, next) => {
+    console.log("Categorydetails is called");
+    try {
+      // Fetch all categories without pagination and populate parentCategory
+      if (req.query.parentCategory) {
+        let parentCategory = req.query.parentCategory;
+        let subcategories = await Model.Category.find({
+          isDeleted: false,
+          parentCategory: parentCategory,
+        })
+          .select("_id categoryName parentCategory")
+          .populate({
+            path: "parentCategory",
+            select: "_id categoryName",
+          })
+          .sort("-_id");
+        const CategorySize = subcategories.length;
+
+        const result = {
+          Category: subcategories,
+          count: CategorySize,
+        };
+
+        // Check if no categories are found
+
+        if (CategorySize === 0) {
+          // Return an empty array as the result
+          return res.ok("No subcategories found", []);
+        }
+        console.log(result, "result");
+        // Return a success response with the result
+        return res.ok("subCategorydetails found successfully", result);
+      }
+
+      const parentCategories = await Model.Category.find({
+        isDeleted: false,
+        parentCategory: null,
+        childCategories: { $ne: [] }, // Exclude documents where childCategories is an empty array
+      })
+        .sort("-_id")
+        .select("_id categoryName childCategories")
+        .populate({
+          path: "childCategories",
+          select: "_id categoryName",
+        });
+
+      const CategorySize = parentCategories.length;
+      const parentResult = {
+        Category: parentCategories,
+        count: CategorySize,
+      };
+
+      // Return a success response with the result
+      return res.ok("Category details found successfully", parentResult);
+    } catch (error) {
+      throw new HTTPError(Status.INTERNAL_SERVER_ERROR, error);
+    }
+  }),
+
 };
